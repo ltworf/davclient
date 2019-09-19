@@ -7,6 +7,7 @@ from collections import defaultdict
 from errno import ENOENT
 from stat import S_IFDIR, S_IFLNK, S_IFREG
 from time import time
+from typing import List
 
 from fusepy import FUSE, FuseOSError, Operations, LoggingMixIn
 
@@ -84,7 +85,7 @@ class Memory(LoggingMixIn, Operations):
     def read(self, path, size, offset, fh):
         return self.data[path][offset:offset + size]
 
-    def readdir(self, path, fh):
+    def readdir(self, path:str, fd: int) -> List[str]:
         return ['.', '..'] + [x[1:] for x in self.files if x != '/']
 
     def readlink(self, path):
