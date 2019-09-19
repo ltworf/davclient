@@ -10,10 +10,6 @@ from time import time
 
 from fusepy import FUSE, FuseOSError, Operations, LoggingMixIn
 
-if not hasattr(__builtins__, 'bytes'):
-    bytes = str
-
-
 class Memory(LoggingMixIn, Operations):
     'Example memory filesystem. Supports only one level of files.'
 
@@ -49,6 +45,8 @@ class Memory(LoggingMixIn, Operations):
 
         self.fd += 1
         return self.fd
+        #{'st_mode': 16877, 'st_ctime': 1568913735.8914306, 'st_mtime': 1568913735.8914306, 'st_atime': 1568913735.8914306, 'st_nlink': 2}
+
 
     def getattr(self, path, fh=None):
         if path not in self.files:
