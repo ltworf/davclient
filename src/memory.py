@@ -11,10 +11,13 @@ from typing import List
 
 from fusepy import FUSE, FuseOSError, Operations, LoggingMixIn
 
+import dav
+
 class Memory(LoggingMixIn, Operations):
     'Example memory filesystem. Supports only one level of files.'
 
-    def __init__(self):
+    def __init__(self, dav: dav.DavClient) -> None:
+        self.dav = dav
         self.files = {}
         self.data = defaultdict(bytes)
         self.fd = 0
@@ -86,7 +89,8 @@ class Memory(LoggingMixIn, Operations):
         return self.data[path][offset:offset + size]
 
     def readdir(self, path:str, fd: int) -> List[str]:
-        return ['.', '..'] + [x[1:] for x in self.files if x != '/']
+        return ['.', '..'] + [i for i in self.dav.list_files(path)]
+
 
     def readlink(self, path):
         return self.data[path]
@@ -155,7 +159,9 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('mount')
+    parser.add_argument('hostname')
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG)
-    fuse = FUSE(Memory(), args.mount, foreground=True, allow_other=False)
+    dav_client = dav.DavClient(args.hostname)
+    fuse = FUSE(Memory(dav_client), args.mount, foreground=True, allow_other=False)
