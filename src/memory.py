@@ -10,6 +10,7 @@ from time import time
 from typing import List
 
 from fusepy import FUSE, FuseOSError, Operations, LoggingMixIn
+import typedload
 
 import dav
 
@@ -53,10 +54,10 @@ class Memory(LoggingMixIn, Operations):
 
 
     def getattr(self, path, fh=None):
-        if path not in self.files:
+        try:
+            return typedload.dump(self.dav.stat(path))
+        except:
             raise FuseOSError(ENOENT)
-
-        return self.files[path]
 
     def getxattr(self, path, name, position=0):
         attrs = self.files[path].get('attrs', {})
