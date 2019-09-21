@@ -161,8 +161,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('mount')
     parser.add_argument('hostname')
+    parser.add_argument('--username', default=None)
+    parser.add_argument('--password', default=None)
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG)
-    dav_client = dav.DavClient(args.hostname)
+    username = args.username.encode() if args.username else None
+    password = args.password.encode() if args.password else None
+    dav_client = dav.DavClient(args.hostname, username, password)
     fuse = FUSE(Memory(dav_client), args.mount, foreground=True, allow_other=False)
