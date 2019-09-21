@@ -21,13 +21,49 @@ Module to load data into data structures from the "attr" module
 # author Salvo "LtWorf" Tomaselli <tiposchi@tiscali.it>
 
 from urllib3 import HTTPSConnectionPool
-from typing import Iterable
+import stat
+from typing import Iterable, NamedTuple
 import xml.etree.ElementTree as ET
+
+
+class Props(NamedTuple):
+    st_mode: int
+    st_size: int
+    st_nlink: int
+    st_ctime: float
+    st_mtime: float
+    st_atime: float
 
 
 class DavClient:
     def __init__(self, hostname: str) -> None:
         self.pool = HTTPSConnectionPool(hostname, maxsize=1)
+
+    def stat(self, href: str) -> Props:
+        headers = {}
+        r = self.pool.request('PROPFIND', href, headers=headers)
+        if r.status != 207:
+            raise Exception('Invalid status')
+
+        root = ET.fromstring(r.data)
+
+        size = root[0].find('{DAV:}propstat').find('{DAV:}prop').find('{DAV:}getcontentlength').text
+        m_time = root[0].find('{DAV:}propstat').find('{DAV:}prop').find('{DAV:}getlastmodified').text
+
+        if len(root[0].find('{DAV:}propstat').find('{DAV:}prop').find('{DAV:}resourcetype')):
+            # The OR is to give it EXEC permissions
+            st_mode = stat.S_IFDIR | 0o500
+        else:
+            st_mode = stat.S_IFREG | 0o400
+
+        return Props(
+            st_mode=st_mode,
+            st_size=int(size),
+            st_nlink=1, #FIXME
+            st_ctime=0, #FIXME
+            st_mtime=0, #FIXME
+            st_atime=0, #FIXME
+        )
 
     def list_files(self, href: str) -> Iterable[str]:
         headers = {'Depth': '1'}
