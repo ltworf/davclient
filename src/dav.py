@@ -20,9 +20,10 @@ Module to load data into data structures from the "attr" module
 #
 # author Salvo "LtWorf" Tomaselli <tiposchi@tiscali.it>
 
+from base64 import b64encode
 from urllib3 import HTTPSConnectionPool
 import stat
-from typing import Iterable, NamedTuple
+from typing import Dict, Iterable, NamedTuple, Optional, Union
 import xml.etree.ElementTree as ET
 
 
@@ -36,11 +37,17 @@ class Props(NamedTuple):
 
 
 class DavClient:
-    def __init__(self, hostname: str) -> None:
+    def __init__(self, hostname: str, username: Optional[bytes], password: Optional[bytes]) -> None:
         self.pool = HTTPSConnectionPool(hostname, maxsize=1)
+
+        self.default_headers: Dict[str, Union[bytes, str]] = {}
+        if username is not None:
+            self.default_headers['Authorization'] = b64encode(b'Basic {username}:{password}')
+
 
     def stat(self, href: str) -> Props:
         headers = {}
+        headers.update(self.default_headers)
         r = self.pool.request('PROPFIND', href, headers=headers)
         if r.status != 207:
             raise Exception('Invalid status')
@@ -67,6 +74,7 @@ class DavClient:
 
     def list_files(self, href: str) -> Iterable[str]:
         headers = {'Depth': '1'}
+        headers.update(self.default_headers)
         r = self.pool.request('PROPFIND', href, headers=headers)
         if r.status != 207:
             raise Exception('Invalid status')
