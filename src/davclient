@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+
+# Copyright (C) 2019 Salvo "LtWorf" Tomaselli
+#
+# davclient is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# author Salvo "LtWorf" Tomaselli <tiposchi@tiscali.it>
+
+import logging
+
+from errno import ENOENT
+from typing import List
+
+from fusepy import FUSE, FuseOSError, Operations, LoggingMixIn
+import typedload
+
+import dav
+
+class Memory(LoggingMixIn, Operations):
+    'Example memory filesystem. Supports only one level of files.'
+
+    def __init__(self, dav: dav.DavClient) -> None:
+        self.dav = dav
+
+    def getattr(self, path, fh=None):
+        try:
+            return typedload.dump(self.dav.stat(path))
+        except:
+            raise FuseOSError(ENOENT)
+
+    def read(self, path, size, offset, fh) -> bytes:
+        return self.dav.read(path, offset, offset + size)
+
+    def readdir(self, path:str, fd: int) -> List[str]:
+        return ['.', '..'] + [i for i in self.dav.list_files(path)]
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('mount')
+    parser.add_argument('hostname')
+    parser.add_argument('--username', default=None)
+    parser.add_argument('--password', default=None)
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.DEBUG)
+    username = args.username.encode() if args.username else None
+    password = args.password.encode() if args.password else None
+    dav_client = dav.DavClient(args.hostname, username, password)
+    fuse = FUSE(Memory(dav_client), args.mount, foreground=True, allow_other=False)
