@@ -21,7 +21,7 @@ Module to load data into data structures from the "attr" module
 # author Salvo "LtWorf" Tomaselli <tiposchi@tiscali.it>
 
 from base64 import b64encode
-from urllib3 import HTTPSConnectionPool
+from urllib3 import HTTPSConnectionPool, HTTPConnectionPool
 import urllib
 import stat
 from typing import Dict, Iterable, NamedTuple, Optional, Union
@@ -38,8 +38,21 @@ class Props(NamedTuple):
 
 
 class DavClient:
-    def __init__(self, hostname: str, username: Optional[bytes], password: Optional[bytes]) -> None:
-        self.pool = HTTPSConnectionPool(hostname, maxsize=1)
+    def __init__(self, url: str, username: Optional[bytes], password: Optional[bytes]) -> None:
+
+        url_data = urllib.parse.urlsplit(url)
+
+        if url_data.scheme in {'http', 'webdav'}:
+            ConnectionPool = HTTPConnectionPool
+        else:
+            ConnectionPool = HTTPSConnectionPool
+
+        self.base_href = url_data.path
+
+        if url_data.query or url_data.fragment:
+            raise Exception('Invalid connection query')
+
+        self.pool = ConnectionPool(url_data.netloc, maxsize=1)
 
         self.default_headers: Dict[str, Union[bytes, str]] = {}
         if username is not None:
