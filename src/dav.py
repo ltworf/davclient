@@ -86,3 +86,19 @@ class DavClient:
              partial = i.find('{DAV:}href').text[hreflen:]
              if partial:
                  yield partial
+
+    def read(self, href: str, start: int, end: int) -> bytes:
+        props = self.stat(href)
+
+        headers = {}
+        if end < props.st_size:
+            headers['Range'] = f'bytes={start}-{end - 1}'
+        else:
+            headers['Range'] = f'bytes={start}-{props.st_size - 1}'
+
+        headers.update(self.default_headers)
+
+        r = self.pool.request('GET', href, headers=headers)
+        if r.status != 206:
+            raise Exception(f'Invalid status: {r.status}')
+        return r.data

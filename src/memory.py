@@ -86,12 +86,11 @@ class Memory(LoggingMixIn, Operations):
         self.fd += 1
         return self.fd
 
-    def read(self, path, size, offset, fh):
-        return self.data[path][offset:offset + size]
+    def read(self, path, size, offset, fh) -> bytes:
+        return self.dav.read(path, offset, offset + size)
 
     def readdir(self, path:str, fd: int) -> List[str]:
         return ['.', '..'] + [i for i in self.dav.list_files(path)]
-
 
     def readlink(self, path):
         return self.data[path]
