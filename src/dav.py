@@ -58,9 +58,11 @@ class DavClient:
         if username is not None:
             self.default_headers['Authorization'] = b64encode(b'Basic {username}:{password}')
 
+    def _fixhref(self, href: str) -> str:
+        return urllib.parse.quote(self.base_href + href)
 
     def stat(self, href: str) -> Props:
-        href = urllib.parse.quote(href)
+        href = self._fixhref(href)
         headers = {}
         headers.update(self.default_headers)
         r = self.pool.request('PROPFIND', href, headers=headers)
@@ -87,7 +89,7 @@ class DavClient:
         )
 
     def list_files(self, href: str) -> Iterable[str]:
-        href = urllib.parse.quote(href)
+        href = self._fixhref(href)
         headers = {'Depth': '1'}
         headers.update(self.default_headers)
         r = self.pool.request('PROPFIND', href, headers=headers)
@@ -103,8 +105,8 @@ class DavClient:
                  yield urllib.parse.unquote(partial)
 
     def read(self, href: str, start: int, end: int) -> bytes:
-        href = urllib.parse.quote(href)
         props = self.stat(href)
+        href = self._fixhref(href)
 
         headers = {}
         if end < props.st_size:
