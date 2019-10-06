@@ -100,9 +100,12 @@ class DavClient:
 
         hreflen = len(href)
         for i in root:
-             partial = i.find('{DAV:}href').text[hreflen:]
-             if partial:
-                 yield urllib.parse.unquote(partial)
+            partial = i.find('{DAV:}href').text[hreflen:]
+            partial = urllib.parse.unquote(partial)
+            while partial.startswith('/'):
+                partial = partial[1:]
+            if partial:
+                yield  partial
 
     def read(self, href: str, start: int, end: int) -> bytes:
         props = self.stat(href)
