@@ -22,6 +22,7 @@ Module to load data into data structures from the "attr" module
 
 from base64 import b64encode
 from urllib3 import HTTPSConnectionPool
+import urllib
 import stat
 from typing import Dict, Iterable, NamedTuple, Optional, Union
 import xml.etree.ElementTree as ET
@@ -46,12 +47,12 @@ class DavClient:
 
 
     def stat(self, href: str) -> Props:
+        href = urllib.parse.quote(href)
         headers = {}
         headers.update(self.default_headers)
         r = self.pool.request('PROPFIND', href, headers=headers)
         if r.status != 207:
             raise Exception('Invalid status')
-
         root = ET.fromstring(r.data)
 
         size = root[0].find('{DAV:}propstat').find('{DAV:}prop').find('{DAV:}getcontentlength').text
@@ -73,6 +74,7 @@ class DavClient:
         )
 
     def list_files(self, href: str) -> Iterable[str]:
+        href = urllib.parse.quote(href)
         headers = {'Depth': '1'}
         headers.update(self.default_headers)
         r = self.pool.request('PROPFIND', href, headers=headers)
@@ -85,9 +87,10 @@ class DavClient:
         for i in root:
              partial = i.find('{DAV:}href').text[hreflen:]
              if partial:
-                 yield partial
+                 yield urllib.parse.unquote(partial)
 
     def read(self, href: str, start: int, end: int) -> bytes:
+        href = urllib.parse.quote(href)
         props = self.stat(href)
 
         headers = {}
