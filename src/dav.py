@@ -97,15 +97,12 @@ class DavClient:
             raise Exception('Invalid status')
 
         root = ET.fromstring(r.data)
-
-        hreflen = len(href)
         for i in root:
-            partial = i.find('{DAV:}href').text[hreflen:]
+            partial = i.find('{DAV:}href').text
             partial = urllib.parse.unquote(partial)
-            while partial.startswith('/'):
-                partial = partial[1:]
+            partial = partial.split('/')[-1]
             if partial:
-                yield  partial
+                yield partial
 
     def read(self, href: str, start: int, end: int) -> bytes:
         props = self.stat(href)
