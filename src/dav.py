@@ -24,9 +24,11 @@ from base64 import b64encode
 from urllib3 import HTTPSConnectionPool, HTTPConnectionPool
 import urllib
 import stat
+from time import time
 from typing import Dict, Iterable, NamedTuple, Optional, Union
 import xml.etree.ElementTree as ET
 
+STATCACHEDURATION = 1
 
 class Props(NamedTuple):
     st_mode: int
@@ -37,10 +39,36 @@ class Props(NamedTuple):
     st_atime: float
 
 
+class CacheItem(NamedTuple):
+    data: Optional[bytes]
+    expiration: int
+
+    def expired(self) -> bool:
+        return time() > self.expiration
+
+
+class DavCache:
+    def __init__(self):
+        self.cached: Dict[str, CacheItem] = {}
+
+    def insert(self, href: str, data: Optional[bytes], expiration: int) -> None:
+        self.cached[href] = CacheItem(data, time() + expiration)
+
+    def get(self, href: str) -> Optional[bytes]:
+        item = self.cached.get(href)
+        if not item:
+            raise Exception() #FIXME
+        if not item.expired():
+            return item.data
+        del self.cached[href]
+        raise Exception()  #FIXME
+
+
 class DavClient:
     def __init__(self, url: str, username: Optional[bytes], password: Optional[bytes]) -> None:
 
         url_data = urllib.parse.urlsplit(url)
+        self.davcache = DavCache()
 
         if url_data.scheme in {'http', 'webdav'}:
             ConnectionPool = HTTPConnectionPool
@@ -63,12 +91,22 @@ class DavClient:
 
     def stat(self, href: str) -> Props:
         href = self._fixhref(href)
-        headers = {}
-        headers.update(self.default_headers)
-        r = self.pool.request('PROPFIND', href, headers=headers)
-        if r.status != 207:
-            raise Exception('Invalid status')
-        root = ET.fromstring(r.data)
+
+        try:
+            data = self.davcache.get(href)
+            if data is None:
+                print('CACHE HIT')
+                raise Exception('Invalid status')
+        except:
+            headers = {}
+            headers.update(self.default_headers)
+            r = self.pool.request('PROPFIND', href, headers=headers)
+            if r.status != 207:
+                self.davcache.insert(href, None, STATCACHEDURATION)
+                raise Exception('Invalid status')
+            data = r.data
+            self.davcache.insert(href, data, STATCACHEDURATION)
+        root = ET.fromstring(data)
 
         size = root[0].find('{DAV:}propstat').find('{DAV:}prop').find('{DAV:}getcontentlength').text
         m_time = root[0].find('{DAV:}propstat').find('{DAV:}prop').find('{DAV:}getlastmodified').text
@@ -98,7 +136,20 @@ class DavClient:
 
         root = ET.fromstring(r.data)
         for i in root:
+            # Take the items for every file in the directory and cache
+            # an item under its url so a stat to it will not generate
+            # a separate PROPFIND request to that URL.
             partial = i.find('{DAV:}href').text
+
+            p = type(i)('ns0:multistatus')
+            p.append(i)
+
+            self.davcache.insert(
+                partial,
+                ET.tostring(p, encoding='utf8'),
+                STATCACHEDURATION,
+            )
+
             partial = urllib.parse.unquote(partial)
             partial = partial.split('/')[-1]
             if partial:
