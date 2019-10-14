@@ -57,11 +57,11 @@ class DavCache:
     def get(self, href: str) -> Optional[bytes]:
         item = self.cached.get(href)
         if not item:
-            raise Exception() #FIXME
+            raise KeyError()
         if not item.expired():
             return item.data
         del self.cached[href]
-        raise Exception()  #FIXME
+        raise KeyError()
 
 
 class DavClient:
@@ -95,14 +95,13 @@ class DavClient:
         try:
             data = self.davcache.get(href)
             if data is None:
-                print('CACHE HIT')
-                raise Exception('Invalid status')
-        except:
+                raise Exception('Invalid status') #FIXME
+        except KeyError:
             headers = {}
             headers.update(self.default_headers)
             r = self.pool.request('PROPFIND', href, headers=headers)
             if r.status != 207:
-                self.davcache.insert(href, None, STATCACHEDURATION)
+                self.davcache.insert(href, None, STATCACHEDURATION)q
                 raise Exception('Invalid status')
             data = r.data
             self.davcache.insert(href, data, STATCACHEDURATION)
