@@ -101,7 +101,7 @@ class DavClient:
             headers.update(self.default_headers)
             r = self.pool.request('PROPFIND', href, headers=headers)
             if r.status != 207:
-                self.davcache.insert(href, None, STATCACHEDURATION)q
+                self.davcache.insert(href, None, STATCACHEDURATION)
                 raise Exception('Invalid status')
             data = r.data
             self.davcache.insert(href, data, STATCACHEDURATION)
