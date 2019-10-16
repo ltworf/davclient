@@ -19,7 +19,8 @@
 
 import logging
 
-from errno import ENOENT
+from errno import ENOENT, EISDIR
+import stat
 from typing import List
 
 from fusepy import FUSE, FuseOSError, Operations, LoggingMixIn
@@ -44,6 +45,15 @@ class Memory(LoggingMixIn, Operations):
 
     def readdir(self, path:str, fd: int) -> List[str]:
         return ['.', '..'] + [i for i in self.dav.list_files(path)]
+
+    def unlink(self, path):
+        f_attr = self.getattr(path)
+
+        if f_attr['st_mode'] & stat.S_IFDIR:
+            # Refuse to unlink directory
+            raise FuseOSError(EISDIR)
+        self.dav.delete(path)
+
 
 if __name__ == '__main__':
     import argparse

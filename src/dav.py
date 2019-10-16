@@ -63,6 +63,20 @@ class DavCache:
         del self.cached[href]
         raise KeyError()
 
+    def remove_entry(self, href: str, parents: bool) -> None:
+        if parents == False:
+            if href in self.cached:
+                del self.cached[href]
+            return
+
+        parts = href.split('/')
+        for i in range(len(parts)):
+            partial_href = '/'.join(parts[:i + 1])
+            if partial_href in self.cached:
+                del self.cached[partial_href]
+            if partial_href + '/' in self.cached:
+                del self.cached[partial_href + '/']
+
 
 class DavClient:
     def __init__(self, url: str, username: Optional[bytes], password: Optional[bytes]) -> None:
@@ -128,6 +142,16 @@ class DavClient:
             st_mtime=0, #FIXME
             st_atime=0, #FIXME
         )
+
+    def delete(self, href) -> None:
+        href = self._fixhref(href)
+        headers = {}
+        headers.update(self.default_headers)
+        r = self.pool.request('DELETE', href, headers=headers)
+        if r.status != 204:
+            raise Exception('Invalid status')
+        self.davcache.remove_entry(href, parents=True)
+
 
     def list_files(self, href: str) -> Iterable[str]:
         href = self._fixhref(href)
