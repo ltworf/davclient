@@ -19,7 +19,7 @@
 
 import logging
 
-from errno import ENOENT, EISDIR
+from errno import *
 import stat
 from typing import List
 
@@ -43,7 +43,7 @@ class Memory(LoggingMixIn, Operations):
     def read(self, path, size, offset, fh) -> bytes:
         return self.dav.read(path, offset, offset + size)
 
-    def readdir(self, path:str, fd: int) -> List[str]:
+    def readdir(self, path:str, fd: int=-1) -> List[str]:
         return ['.', '..'] + [i for i in self.dav.list_files(path)]
 
     def unlink(self, path):
@@ -52,6 +52,19 @@ class Memory(LoggingMixIn, Operations):
         if f_attr['st_mode'] & stat.S_IFDIR:
             # Refuse to unlink directory
             raise FuseOSError(EISDIR)
+        self.dav.delete(path)
+
+    def rmdir(self, path):
+        try:
+            fc = len(self.readdir(path))
+        except:
+            #FIXME probably wasn't a dir, but might be another error
+            raise FuseOSError(ENOTDIR)
+
+        if fc > 2:
+            # not empty
+            raise FuseOSError(ENOTEMPTY)
+
         self.dav.delete(path)
 
 
