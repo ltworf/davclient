@@ -28,7 +28,7 @@ from time import time
 from typing import Dict, Iterable, NamedTuple, Optional, Union
 import xml.etree.ElementTree as ET
 
-STATCACHEDURATION = 1
+STATCACHEDURATION = 10
 
 class Props(NamedTuple):
     st_mode: int
