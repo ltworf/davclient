@@ -21,12 +21,15 @@ Module to load data into data structures from the "attr" module
 # author Salvo "LtWorf" Tomaselli <tiposchi@tiscali.it>
 
 from base64 import b64encode
+from errno import *
 from urllib3 import HTTPSConnectionPool, HTTPConnectionPool
 import urllib
 import stat
 from time import time
 from typing import Dict, Iterable, NamedTuple, Optional, Union
 import xml.etree.ElementTree as ET
+
+from fusepy import FuseOSError
 
 STATCACHEDURATION = 10
 
@@ -79,6 +82,9 @@ class DavCache:
 
 
 class DavClient:
+    _CODES = {
+        403: EACCES,
+    }
     def __init__(self, url: str, username: Optional[bytes], password: Optional[bytes]) -> None:
 
         url_data = urllib.parse.urlsplit(url)
@@ -100,6 +106,14 @@ class DavClient:
         if username is not None:
             self.default_headers['Authorization'] = b64encode(b'Basic {username}:{password}')
 
+    @staticmethod
+    def error_from_status_code(code: int) -> Exception:
+        errno = DavClient._CODES.get(code)
+        if errno:
+            return FuseOSError(errno)
+        return Exception(f'Http returned {code}')
+
+
     def _fixhref(self, href: str) -> str:
         while '//' in href:
             href = href.replace('//', '/')
@@ -120,7 +134,7 @@ class DavClient:
             r = self.pool.request('PROPFIND', href, headers=headers)
             if r.status != 207:
                 self.davcache.insert(href, None, STATCACHEDURATION)
-                raise Exception('Invalid status')
+                raise self.error_from_status_code(r.status)
             data = r.data
             self.davcache.insert(href, data, STATCACHEDURATION)
         root = ET.fromstring(data)
@@ -149,7 +163,7 @@ class DavClient:
         headers.update(self.default_headers)
         r = self.pool.request('DELETE', href, headers=headers)
         if r.status != 204:
-            raise Exception('Invalid status')
+            raise self.error_from_status_code(r.status)
         self.davcache.remove_entry(href, parents=True)
 
 
@@ -159,7 +173,7 @@ class DavClient:
         headers.update(self.default_headers)
         r = self.pool.request('PROPFIND', href, headers=headers)
         if r.status != 207:
-            raise Exception('Invalid status')
+            raise self.error_from_status_code(r.status)
 
         root = ET.fromstring(r.data)
         for i in root:
@@ -196,5 +210,5 @@ class DavClient:
 
         r = self.pool.request('GET', href, headers=headers)
         if r.status != 206:
-            raise Exception(f'Invalid status: {r.status}')
+            raise self.error_from_status_code(r.status)
         return r.data
