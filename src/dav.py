@@ -87,6 +87,10 @@ class DavClient:
             self.default_headers['Authorization'] = b64encode(b'Basic {username}:{password}')
 
     def _fixhref(self, href: str) -> str:
+        while '//' in href:
+            href = href.replace('//', '/')
+        if href.endswith('/'):
+            href = href[:-1]
         return urllib.parse.quote(self.base_href + href)
 
     def stat(self, href: str) -> Props:
