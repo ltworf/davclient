@@ -28,6 +28,7 @@ import stat
 from time import time
 from typing import Dict, Iterable, NamedTuple, Optional, Union
 import xml.etree.ElementTree as ET
+import math
 
 from fusepy import FuseOSError
 
@@ -40,6 +41,8 @@ class Props(NamedTuple):
     st_ctime: float
     st_mtime: float
     st_atime: float
+    st_blksize: int
+    st_blocks: int
 
 
 class CacheItem(NamedTuple):
@@ -140,7 +143,7 @@ class DavClient:
             self.davcache.insert(href, data, STATCACHEDURATION)
         root = ET.fromstring(data)
 
-        size = root[0].find('{DAV:}propstat').find('{DAV:}prop').find('{DAV:}getcontentlength').text
+        size = int(root[0].find('{DAV:}propstat').find('{DAV:}prop').find('{DAV:}getcontentlength').text)
         m_time = root[0].find('{DAV:}propstat').find('{DAV:}prop').find('{DAV:}getlastmodified').text
 
         if len(root[0].find('{DAV:}propstat').find('{DAV:}prop').find('{DAV:}resourcetype')):
@@ -151,11 +154,13 @@ class DavClient:
 
         return Props(
             st_mode=st_mode,
-            st_size=int(size),
+            st_size=size,
             st_nlink=1, #FIXME
             st_ctime=0, #FIXME
             st_mtime=0, #FIXME
             st_atime=0, #FIXME
+            st_blksize=1024,
+            st_blocks=math.ceil(size / 512),
         )
 
     def delete(self, href) -> None:
