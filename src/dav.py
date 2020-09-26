@@ -121,12 +121,11 @@ class DavClient:
 
 
     def _fixhref(self, href: str) -> str:
-        href = urllib.parse.quote(self.base_href + href)
         while '//' in href:
             href = href.replace('//', '/')
         if href.endswith('/'):
             href = href[:-1]
-        return href
+        return urllib.parse.quote(self.base_href + href)
 
     def stat(self, href: str) -> Props:
         href = self._fixhref(href)
