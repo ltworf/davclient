@@ -85,10 +85,12 @@ class DavCache:
 
 
 class DavClient:
+
     _CODES = {
         403: EACCES,
         404: ENOENT,
     }
+
     def __init__(self, url: str, username: Optional[bytes], password: Optional[bytes]) -> None:
 
         url_data = urllib.parse.urlsplit(url)
