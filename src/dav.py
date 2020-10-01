@@ -174,6 +174,16 @@ class DavClient:
             raise self.error_from_status_code(r.status)
         self.davcache.remove_entry(href, parents=True)
 
+    def move(self, src: str, dest: str) -> None:
+        src = self._fixhref(src)
+        dest = self._fixhref(dest)
+
+        headers = {'Overwrite': 'F', 'Destination': dest}
+        headers.update(self.default_headers)
+        r = self.pool.request('MOVE', src, headers=headers)
+        if r.status != 201:
+            raise self.error_from_status_code(r.status)
+        self.davcache.remove_entry(src, parents=True)
 
     def list_files(self, href: str) -> Iterable[str]:
         href = self._fixhref(href)

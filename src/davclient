@@ -67,6 +67,8 @@ class Memory(LoggingMixIn, Operations):
 
         self.dav.delete(path)
 
+    def rename(self, source: str, destination: str) -> None:
+        self.dav.move(source, destination)
 
 if __name__ == '__main__':
     import argparse
