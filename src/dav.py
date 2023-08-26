@@ -106,11 +106,13 @@ class DavClient:
         if url_data.query or url_data.fragment:
             raise Exception('Invalid connection query')
 
-        self.pool = ConnectionPool(url_data.netloc, maxsize=1)
-
         self.default_headers: Dict[str, Union[bytes, str]] = {}
         if username is not None:
             self.default_headers['Authorization'] = b'Basic ' + b64encode(username + b':' + password)
+
+        self.pool = ConnectionPool(url_data.netloc, maxsize=1, headers=self.default_headers)
+
+
 
     @staticmethod
     def error_from_status_code(code: int) -> Exception:
