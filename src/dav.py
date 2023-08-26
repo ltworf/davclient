@@ -3,7 +3,7 @@ davclient
 Module to load data into data structures from the "attr" module
 """
 
-# Copyright (C) 2019 Salvo "LtWorf" Tomaselli
+# Copyright (C) 2019-2023 Salvo "LtWorf" Tomaselli
 #
 # davclient is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -110,7 +110,7 @@ class DavClient:
 
         self.default_headers: Dict[str, Union[bytes, str]] = {}
         if username is not None:
-            self.default_headers['Authorization'] = b64encode(b'Basic {username}:{password}')
+            self.default_headers['Authorization'] = b'Basic ' + b64encode(username + b':' + password)
 
     @staticmethod
     def error_from_status_code(code: int) -> Exception:
