@@ -110,7 +110,7 @@ class DavClient:
         if username is not None:
             self.default_headers['Authorization'] = b'Basic ' + b64encode(username + b':' + password)
 
-        self.pool = ConnectionPool(url_data.netloc, maxsize=1, headers=self.default_headers)
+        self.pool = ConnectionPool(url_data.netloc, maxsize=1, headers=self.default_headers, cert_reqs='CERT_NONE')
 
 
 
